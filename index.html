@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Helix Developer Portfolio Final</title>
+    <style>
+        /* =========================================
+           1. 기본 설정 (Variables & Reset)
+           ========================================= */
+        :root {
+            --bg-color: #0f0f0f;
+            --card-bg: #1a1a1a;
+            --text-main: #ffffff;
+            --text-sub: #a1a1a1;
+            --accent: #ff8c00; /* Helix Orange */
+            --border: #333333;
+            /* 한중일 폰트 지원 강화 */
+            --font-main: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Microsoft YaHei', 'Meiryo', sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            overflow-x: hidden; /* 가로 스크롤 방지 */
+        }
+
+        /* =========================================
+           2. 화면 관리 (Page Transitions)
+           ========================================= */
+        .view-container {
+            width: 100%;
+            min-height: 100vh;
+            padding: 40px 20px;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: absolute;
+            top: 0; left: 0; right: 0;
+        }
+
+        /* 화면이 숨겨질 때 */
+        .view-hidden {
+            opacity: 0;
+            transform: translateY(-30px) scale(0.98);
+            pointer-events: none;
+            visibility: hidden;
+            position: fixed;
+        }
+
+        /* 화면이 보일 때 */
+        .view-active {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+            position: relative;
+        }
+
+        /* =========================================
+           3. 메인 홈 (Bento Grid Layout)
+           ========================================= */
+        .grid-layout {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, auto);
+            gap: 16px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+            cursor: default;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent);
+        }
+
+        /* Typography */
+        h1 { font-size: 2.5rem; font-weight: 800; line-height: 1.2; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin-bottom: 12px; color: var(--text-sub); }
+        h3 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
+        p { color: var(--text-sub); line-height: 1.6; font-size: 0.95rem; }
+        .code { font-family: var(--font-code); color: var(--accent); background: #2a2a2a; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; }
+
+        /* Grid Areas */
+        .profile { grid-column: span 2; grid-row: span 2; justify-content: space-between; }
+        .profile-status { display: inline-block; background: rgba(0, 255, 0, 0.1); color: #00ff00; padding: 6px 12px; border-radius: 100px; font-size: 0.85rem; font-weight: 600; margin-bottom: 16px; }
+        
+        .stack { grid-column: span 1; grid-row: span 2; }
+        .tech-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+        .tech-badge { border: 1px solid var(--border); padding: 8px 12px; border-radius: 12px; font-size: 0.85rem; }
+
+        .contact { grid-column: span 1; grid-row: span 2; background: linear-gradient(135deg, #1a1a1a 0%, #2a1a00 100%); align-items: center; justify-content: center; text-align: center; cursor: pointer; }
+        .discord-btn { font-size: 3rem; margin-bottom: 10px; }
+        .contact-avatar {
+            width: 86px;
+            height: 86px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+            margin-bottom: 12px;
+        }
+        .contact-id { margin-top: 6px; font-family: var(--font-code); color: #ddd; }
+
+        /* Toast (copy feedback) */
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: 28px;
+            transform: translateX(-50%) translateY(16px);
+            background: rgba(20, 20, 20, 0.92);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 10px 14px;
+            color: var(--text-main);
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 10000;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .toast strong { color: var(--accent); font-weight: 700; }
+
+        .hub-trigger {
+            grid-column: span 2; grid-row: span 2;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.9)), url('https://placehold.co/600x400/222/444?text=Plugins+Preview');
+            background-size: cover; background-position: center;
+            cursor: pointer; position: relative;
+        }
+        .hub-trigger-hint {
+            position: absolute; top: 20px; right: 20px;
+            background: var(--accent); color: #000; padding: 8px 16px; 
+            border-radius: 20px; font-weight: bold; font-size: 0.9rem;
+        }
+
+        .services { grid-column: span 4; display: flex; justify-content: space-around; padding: 30px; }
+        .service-item { text-align: center; } 
+        .price { color: var(--accent); font-weight: 700; margin-top: 4px; display: block;}
+        
+        .sub-project { grid-column: span 1; grid-row: span 2; }
+
+
+        /* =========================================
+           4. 포트폴리오 리스트 (List View)
+           ========================================= */
+        #portfolio-view { max-width: 1200px; margin: 0 auto; }
+        
+        .list-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 40px; border-bottom: 1px solid var(--border); padding-bottom: 20px;
+        }
+        .back-btn {
+            background: none; border: 1px solid var(--border); color: var(--text-main);
+            padding: 10px 24px; border-radius: 12px; cursor: pointer; font-size: 1rem;
+            transition: 0.2s; display: flex; align-items: center; gap: 8px;
+        }
+        .back-btn:hover { background: var(--border); }
+
+        .plugin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 24px; }
+        
+        .plugin-card {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 20px; overflow: hidden; display: flex; flex-direction: column;
+            opacity: 0; transform: translateY(20px); /* 애니메이션 시작점 */
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .plugin-card:hover { transform: translateY(-8px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-color: var(--accent); }
+
+        .video-area { 
+            width: 100%; aspect-ratio: 16 / 9; background: #000; 
+            position: relative; cursor: zoom-in; border-bottom: 1px solid var(--border); 
+        }
+        .video-area video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .expand-hint {
+            position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7); color: #fff;
+            padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; pointer-events: none; opacity: 0; transition: 0.3s;
+        }
+        .video-area:hover .expand-hint { opacity: 1; }
+
+        .info-area { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; }
+        .tags { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+        .tag { font-size: 0.75rem; background: #333; padding: 4px 8px; border-radius: 6px; color: var(--text-sub); }
+
+
+        /* =========================================
+           5. 라이트박스 (Video Modal)
+           ========================================= */
+        .lightbox {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.95); z-index: 9999;
+            display: flex; justify-content: center; align-items: center; 
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .lightbox.active { opacity: 1; pointer-events: auto; }
+        .lightbox video { max-width: 90%; max-height: 80vh; border-radius: 12px; box-shadow: 0 0 50px rgba(255, 140, 0, 0.2); }
+        .lightbox-close { 
+            position: absolute; top: 30px; right: 30px; 
+            background: none; border: none; color: #fff; font-size: 2.5rem; cursor: pointer; 
+        }
+
+
+        /* =========================================
+           6. 언어 선택기 (Gap Bug Fix 완료)
+           ========================================= */
+        .lang-switcher-container {
+            position: fixed; bottom: 30px; right: 30px; z-index: 500;
+            display: flex; flex-direction: column-reverse; align-items: flex-end;
+        }
+
+        .lang-btn {
+            width: 50px; height: 50px; border-radius: 50%;
+            background: rgba(30, 30, 30, 0.8); backdrop-filter: blur(10px);
+            border: 1px solid var(--border); color: var(--text-main);
+            font-size: 1.5rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s;
+            position: relative; z-index: 2;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        /* 컨테이너 전체에 호버 시 버튼 스타일 변경 */
+        .lang-switcher-container:hover .lang-btn {
+            background: var(--accent); color: #000; border-color: var(--accent); transform: scale(1.1);
+        }
+
+        .lang-menu {
+            background: rgba(20, 20, 20, 0.95); backdrop-filter: blur(10px);
+            border: 1px solid var(--border); border-radius: 16px;
+            
+            /* [버그 수정 핵심] 버튼 바로 위에 위치 + 투명 받침대 영역 */
+            position: absolute; bottom: 100%; right: 0; width: 130px;
+            margin-bottom: 15px; /* 버튼과의 시각적 거리 */
+            padding: 8px;
+            
+            display: flex; flex-direction: column; gap: 4px;
+            opacity: 0; transform: translateY(10px) scale(0.95);
+            pointer-events: none; transition: all 0.2s ease;
+        }
+
+        /* [버그 수정 핵심] 가상 요소로 빈 공간(Gap) 채우기 */
+        .lang-menu::after {
+            content: '';
+            position: absolute;
+            top: 100%; /* 메뉴 바닥 */
+            left: 0;
+            width: 100%;
+            height: 20px; /* 버튼까지 닿을 정도의 높이 */
+            background: transparent; /* 눈에는 안 보임 */
+        }
+
+        /* 컨테이너에 호버 시 메뉴 표시 */
+        .lang-switcher-container:hover .lang-menu {
+            opacity: 1; transform: translateY(0) scale(1); pointer-events: auto;
+        }
+
+        .lang-option {
+            background: none; border: none; color: var(--text-sub);
+            padding: 10px; border-radius: 8px; cursor: pointer; text-align: left;
+            font-weight: 500; font-size: 0.9rem; transition: 0.2s;
+        }
+        .lang-option:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+        .lang-option.active { color: var(--accent); font-weight: bold; background: rgba(255, 140, 0, 0.1); }
+
+
+        /* =========================================
+           7. 애니메이션 및 반응형
+           ========================================= */
+        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 768px) {
+            .grid-layout { grid-template-columns: 1fr; }
+            .profile, .stack, .contact, .hub-trigger, .services, .sub-project { grid-column: span 1; grid-row: auto; }
+            .services { flex-direction: column; gap: 20px; }
+            .plugin-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="lang-switcher-container">
+        <button class="lang-btn">🌐</button>
+        <div class="lang-menu">
+            <button class="lang-option active" data-lang-code="en" onclick="setLanguage('en', this)">English</button>
+            <button class="lang-option" data-lang-code="ko" onclick="setLanguage('ko', this)">한국어</button>
+            <button class="lang-option" data-lang-code="ja" onclick="setLanguage('ja', this)">日本語</button>
+            <button class="lang-option" data-lang-code="zh" onclick="setLanguage('zh', this)">中文</button>
+        </div>
+    </div>
+
+    <section id="home-view" class="view-container view-active">
+        <div class="grid-layout">
+            <div class="card profile">
+                <div>
+                    <span class="profile-status" data-lang="status">● Commission Open</span><br><br>
+                    <h1 data-lang="hero_title">Helix<br><span style="color:var(--accent)">Developer</span></h1>
+                </div>
+                <p data-lang="hero_desc">Specialized in developing systems for Serious Roleplay servers.</p>
+            </div>
+
+            <div class="card stack">
+                <h2>Category</h2>
+                <div class="tech-list">
+                    <span class="tech-badge">Lua</span> <span class="tech-badge">Helix</span> <span class="tech-badge">SQL</span> <span class="tech-badge">Hammer++</span>
+                </div>
+            </div>
+
+             <div class="card contact" onclick="copyDiscordId()" data-discord-id="0_fallen" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); copyDiscordId();}">
+                 <img class="contact-avatar" src="./assets/image.png" alt="Profile photo">
+                <h3 data-lang="contact_title">Contact</h3>
+                <p class="contact-id">0_fallen</p>
+            </div>
+
+            <div class="card hub-trigger" onclick="switchView('portfolio')">
+                <div class="hub-trigger-hint" data-lang="btn_explore">Click to View ➔</div>
+                <div style="margin-top:auto;">
+                    <h3 style="font-size:2rem;" data-lang="showcase_title">Plugin<br>Showcase</h3>
+                    <p style="color:#ddd;" data-lang="showcase_desc">Click to explore all works</p>
+                </div>
+            </div>
+
+            <div class="card sub-project">
+                <h3 data-lang="sub1_title">UI Design</h3>
+                <p data-lang="sub1_desc">Custom Derma Skin</p>
+            </div>
+            <div class="card sub-project">
+                <h3 data-lang="sub2_title">Optimization</h3>
+                <p data-lang="sub2_desc">Server-side Logic</p>
+            </div>
+            
+            <div class="card services">
+                <div class="service-item"><h3 data-lang="srv_plugin">Plugin</h3><span class="price">4.5$~</span></div>
+                <div class="service-item"><h3 data-lang="srv_ui">UI</h3><span class="price">10$~</span></div>
+                <div class="service-item"><h3 data-lang="srv_full">Full Work</h3><span class="price" data-lang="srv_consult">Consult</span></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="portfolio-view" class="view-container view-hidden">
+        <div class="list-header">
+            <div>
+                <h1 data-lang="list_header">Recent Works</h1>
+                <p data-lang="list_sub">Hover to preview, click to expand.</p>
+            </div>
+            <button class="back-btn" onclick="switchView('home')">
+                <span>↩</span> <span data-lang="btn_back">Back to Home</span>
+            </button>
+        </div>
+
+        <div class="plugin-grid">
+            
+            <div class="plugin-card">
+                <div class="video-area" onclick="openLightbox(this)">
+                    <video muted loop playsinline onmouseenter="this.play()" onmouseleave="this.pause(); this.currentTime=0;">
+                        <source src="https://www.dropbox.com/scl/fi/99848mm2c0a7et6rkr5fb/fallout_mainmenu.webm?rlkey=s5zjed0s2d5r80auuvekys0q6&st=uyx92sgt&raw=1" type="video/webm">
+                    </video>
+                    <div class="expand-hint" data-lang="hint_expand">Click to Expand 🔍</div>
+                    <div style="position:absolute; top:0; left:0; width:100%; height:100%; background: url('./assets/image.png') center/cover; z-index:-1;"></div>
+                </div>
+                <div class="info-area">
+                    <h3 data-lang="p1_title">폴아웃 - 메인메뉴</h3>
+                    <p style="margin-top:8px; font-size:0.9rem;" data-lang="p1_desc">폴아웃 스타일의 메인메뉴 추가.</p>
+                    <div class="tags"><span class="tag">#UI</span> <span class="tag">#Derma</span></div>
+                </div>
+            </div>
+
+            <div class="plugin-card">
+                <div class="video-area" onclick="openLightbox(this)">
+                    <video muted loop playsinline onmouseenter="this.play()" onmouseleave="this.pause(); this.currentTime=0;">
+                        <source src="https://www.dropbox.com/scl/fi/u8g1ey6iliz137gsr32d8/fallout_quest.webm?rlkey=hu6tdskviqm0rabg7kdtegh0z&st=bah10sgw&raw=1" type="video/webm">
+                    </video>
+                    <div class="expand-hint" data-lang="hint_expand">Click to Expand 🔍</div>
+                    <div style="position:absolute; top:0; left:0; width:100%; height:100%; background: url('./assets/image.png') center/cover; z-index:-1;"></div>
+                </div>
+                <div class="info-area">
+                    <h3 data-lang="p2_title">폴아웃 - 퀘스트 시스템</h3>
+                    <p style="margin-top:8px; font-size:0.9rem;" data-lang="p2_desc">유저들에게 폴아웃 스타일의 퀘스트 인터페이스 출력.</p>
+                    <div class="tags"><span class="tag">#UI</span> <span class="tag">#System</span></div>
+                </div>
+            </div>
+
+            <div class="plugin-card">
+                <div class="video-area" onclick="openLightbox(this)">
+                    <video muted loop playsinline onmouseenter="this.play()" onmouseleave="this.pause(); this.currentTime=0;">
+                        <source src="https://www.dropbox.com/scl/fi/ubcqhq3qxqarv5v3cltlf/fallout_charload.webm?rlkey=uhd45abe5aagjopm12fl6kyn4&st=g9tjfdgo&raw=1" type="video/webm">
+                    </video>
+                    <div class="expand-hint" data-lang="hint_expand">Click to Expand 🔍</div>
+                    <div style="position:absolute; top:0; left:0; width:100%; height:100%; background: url('./assets/image.png') center/cover; z-index:-1;"></div>
+                </div>
+                <div class="info-area">
+                    <h3 data-lang="p3_title">폴아웃 - 캐릭터 로드메뉴</h3>
+                    <p style="margin-top:8px; font-size:0.9rem;" data-lang="p3_desc">폴아웃 스타일의 캐릭터 로드UI 추가.</p>
+                    <div class="tags"><span class="tag">#UI</span> <span class="tag">#Menu</span></div>
+                </div>
+            </div>
+            
+             <div class="plugin-card">
+                <div class="video-area" onclick="openLightbox(this)">
+                    <video muted loop playsinline onmouseenter="this.play()" onmouseleave="this.pause(); this.currentTime=0;">
+                        <source src="https://www.dropbox.com/scl/fi/vuy3iocj95gwv0n2pvyz4/medieval_cooking.webm?rlkey=s6tyj8z3ke3oe6ehp77w29rza&st=iai4tsnr&raw=1" type="video/webm">
+                    </video>
+                    <div class="expand-hint" data-lang="hint_expand">Click to Expand 🔍</div>
+                    <div style="position:absolute; top:0; left:0; width:100%; height:100%; background: url('./assets/image.png') center/cover; z-index:-1;"></div>
+                </div>
+                <div class="info-area">
+                    <h3 data-lang="p4_title">중세시대 - 요리 시스템</h3>
+                    <p style="margin-top:8px; font-size:0.9rem;" data-lang="p4_desc">시각적, 청각적 이펙트를 포함한 요리 시스템 추가.</p>
+                    <div class="tags"><span class="tag">#VFX</span> <span class="tag">#SFX</span></div>
+                </div>
+            </div>
+
+            <div class="plugin-card">
+                <div class="video-area" onclick="openLightbox(this)">
+                    <video muted loop playsinline onmouseenter="this.play()" onmouseleave="this.pause(); this.currentTime=0;">
+                        <source src="https://www.dropbox.com/scl/fi/nnncwh1uxavp8r1rz147j/medieval_blacksmith.webm?rlkey=dmlpwai4h5sv00hbnkr31sq1e&st=9y766j0f&raw=1" type="video/webm">
+                    </video>
+                    <div class="expand-hint" data-lang="hint_expand">Click to Expand 🔍</div>
+                    <div style="position:absolute; top:0; left:0; width:100%; height:100%; background: url('./assets/image.png') center/cover; z-index:-1;"></div>
+                </div>
+                <div class="info-area">
+                    <h3 data-lang="p5_title">중세시대 - 대장간 시스템</h3>
+                    <p style="margin-top:8px; font-size:0.9rem;" data-lang="p5_desc">시각적, 청각적 이펙트를 지닌 대장장이 시스템 추가.</p>
+                    <div class="tags"><span class="tag">#VFX</span> <span class="tag">#Craft</span></div>
+                </div>
+            </div>
+
+            <div class="plugin-card">
+                <div class="video-area" onclick="openLightbox(this)">
+                    <video muted loop playsinline onmouseenter="this.play()" onmouseleave="this.pause(); this.currentTime=0;">
+                        <source src="https://www.dropbox.com/scl/fi/v1d8o1q1gngouc1u0cbvo/combine_interface.webm?rlkey=q26h6uyoci81vn15by1t0oi4s&st=73r41dbx&raw=1" type="video/webm">
+                    </video>
+                    <div class="expand-hint" data-lang="hint_expand">Click to Expand 🔍</div>
+                    <div style="position:absolute; top:0; left:0; width:100%; height:100%; background: url('./assets/image.png') center/cover; z-index:-1;"></div>
+                </div>
+                <div class="info-area">
+                    <h3 data-lang="p6_title">하프라이프 - 콤바인 인터페이스</h3>
+                    <p style="margin-top:8px; font-size:0.9rem;" data-lang="p6_desc">퍼센테이지로 표시되는 사회안정도와 수치에 따른 효과와 마스크 부팅 UI 추가.</p>
+                    <div class="tags"><span class="tag">#HUD</span> <span class="tag">#UI</span></div>
+                </div>
+            </div>
+
+            <div class="plugin-card">
+                <div class="video-area" onclick="openLightbox(this)">
+                    <video muted loop playsinline onmouseenter="this.play()" onmouseleave="this.pause(); this.currentTime=0;">
+                         <source src="https://www.dropbox.com/scl/fi/22vkejaltplwwjjp1fjc4/combine_pda.webm?rlkey=0e6m98jtcgc4w4ffl8xaohur7&st=xqya17df&raw=1" type="video/webm">
+                    </video>
+                    <div class="expand-hint" data-lang="hint_expand">Click to Expand 🔍</div>
+                    <div style="position:absolute; top:0; left:0; width:100%; height:100%; background: url('./assets/image.png') center/cover; z-index:-1;"></div>
+                </div>
+                <div class="info-area">
+                    <h3 data-lang="p7_title">하프라이프 - 콤바인 PDA</h3>
+                    <p style="margin-top:8px; font-size:0.9rem;" data-lang="p7_desc">시민 보호 기동대와 같은 콤바인 팩션이 엑세스할 수 있는 PDA 시스템 추가. (분대 및 데이터베이스 시스템이 포함됨)</p>
+                    <div class="tags"><span class="tag">#System</span> <span class="tag">#Database</span></div>
+                </div>
+            </div>
+
+            <div class="plugin-card">
+                <div class="video-area" onclick="openLightbox(this)">
+                    <video muted loop playsinline onmouseenter="this.play()" onmouseleave="this.pause(); this.currentTime=0;">
+                        <source src="https://www.dropbox.com/scl/fi/d1ehizb5nnf7orm5owxby/factory.webm?rlkey=yy5zqsdw4wfa6ojdu5y6c3cge&st=kcawjp9j&raw=1" type="video/webm">
+                    </video>
+                    <div class="expand-hint" data-lang="hint_expand">Click to Expand 🔍</div>
+                    <div style="position:absolute; top:0; left:0; width:100%; height:100%; background: url('./assets/image.png') center/cover; z-index:-1;"></div>
+                </div>
+                <div class="info-area">
+                    <h3 data-lang="p8_title">공장 시스템</h3>
+                    <p style="margin-top:8px; font-size:0.9rem;" data-lang="p8_desc">AFC, 열교환기, 증류탑 등등 정유공장에 주로 사용되는 장치 추가 및 중앙 관리 시스템 추가.</p>
+                    <div class="tags"><span class="tag">#Simulation</span> <span class="tag">#System</span></div>
+                </div>
+            </div>
+
+            <div class="plugin-card">
+                <div class="video-area" onclick="openLightbox(this)">
+                    <video muted loop playsinline onmouseenter="this.play()" onmouseleave="this.pause(); this.currentTime=0;">
+                        <source src="https://www.dropbox.com/scl/fi/wrbnlnjtwy3t8eg7e3eq9/retro_computer.webm?rlkey=0c4qofdxlpnnz2gp7dx0g2rqz&st=auzre5xb&raw=1" type="video/webm">
+                    </video>
+                    <div class="expand-hint" data-lang="hint_expand">Click to Expand 🔍</div>
+                    <div style="position:absolute; top:0; left:0; width:100%; height:100%; background: url('./assets/image.png') center/cover; z-index:-1;"></div>
+                </div>
+                <div class="info-area">
+                    <h3 data-lang="p9_title">레트로 컴퓨터 스타일 메뉴 추가</h3>
+                    <p style="margin-top:8px; font-size:0.9rem;" data-lang="p9_desc">레트로 컴퓨터 스타일의 메인메뉴, 캐릭터 생성UI, 캐릭터 로드UI, 인벤토리UI 추가. (프리뷰에 나오는 모델 미포함)</p>
+                    <div class="tags"><span class="tag">#UI</span> <span class="tag">#Menu</span></div>
+                </div>
+            </div>
+
+            <div class="plugin-card">
+                <div class="video-area" onclick="openLightbox(this)">
+                    <video muted loop playsinline onmouseenter="this.play()" onmouseleave="this.pause(); this.currentTime=0;">
+                         <source src="https://www.dropbox.com/scl/fi/0ijre03wkeb9ojowgh03m/typewrite.webm?rlkey=zerc6vor8hfm1je8jk43u8wyi&st=yj5yb2kp&raw=1" type="video/webm">
+                    </video>
+                    <div class="expand-hint" data-lang="hint_expand">Click to Expand 🔍</div>
+                    <div style="position:absolute; top:0; left:0; width:100%; height:100%; background: url('./assets/image.png') center/cover; z-index:-1;"></div>
+                </div>
+                <div class="info-area">
+                    <h3 data-lang="p10_title">Typewrite 효과 채팅</h3>
+                    <p style="margin-top:8px; font-size:0.9rem;" data-lang="p10_desc">Typewrite 효과로 출력되는 채팅 시스템.</p>
+                    <div class="tags"><span class="tag">#Chat</span> <span class="tag">#UI</span></div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <div class="lightbox" id="videoLightbox" onclick="closeLightbox()">
+        <button class="lightbox-close">&times;</button>
+        <video id="lightboxVideo" controls autoplay></video>
+    </div>
+
+    <div class="toast" id="toast" aria-live="polite"></div>
+
+    <script>
+        // =========================================
+        // DATA: 다국어 번역 데이터베이스
+        // =========================================
+        const translations = {
+            "en": {
+                "status": "● Commission Open",
+                "hero_title": "Helix<br><span style='color:var(--accent)'>Developer</span>",
+                "hero_desc": "Specialized in developing systems for Serious Roleplay servers.",
+                "contact_title": "Contact",
+                "btn_explore": "Click to View ➔",
+                "showcase_title": "Plugin<br>Showcase",
+                "showcase_desc": "Click to explore all works",
+                "sub1_title": "UI Design",
+                "sub1_desc": "Custom Derma Skin",
+                "sub2_title": "Optimization",
+                "sub2_desc": "Server-side Logic",
+                "srv_plugin": "Plugin",
+                "srv_ui": "UI",
+                "srv_full": "Full Work",
+                "srv_consult": "Consult",
+                "list_header": "Recent Works",
+                "list_sub": "Hover to preview, click to expand.",
+                "btn_back": "Back to Home",
+                "hint_expand": "Click to Expand 🔍",
+                
+                "p1_title": "Fallout - Main Menu",
+                "p1_desc": "Adds a Fallout-style main menu.",
+                "p2_title": "Fallout - Quest System",
+                "p2_desc": "Displays a Fallout-style quest interface to users.",
+                "p3_title": "Fallout - Character Load Menu",
+                "p3_desc": "Adds a Fallout-style character load UI.",
+                "p4_title": "Medieval - Cooking System",
+                "p4_desc": "Adds a cooking system with visual and sound effects.",
+                "p5_title": "Medieval - Blacksmith System",
+                "p5_desc": "Adds a blacksmithing system with visual and sound effects.",
+                "p6_title": "Half-Life - Combine Interface",
+                "p6_desc": "Adds a stability percentage UI with effects by value, plus a mask boot UI.",
+                "p7_title": "Half-Life - Combine PDA",
+                "p7_desc": "Adds a PDA system accessible to Combine factions, including squad and database systems.",
+                "p8_title": "Factory System",
+                "p8_desc": "Adds refinery devices such as AFC, heat exchangers, and distillation towers, plus a central management system.",
+                "p9_title": "Retro Computer-Style Menu Pack",
+                "p9_desc": "Adds a retro computer-style main menu, character creation UI, character load UI, and inventory UI. (Preview model not included)",
+                "p10_title": "Typewrite Chat Effect",
+                "p10_desc": "A chat system that prints messages with a typewriter effect."
+            },
+            "ko": {
+                "status": "● 커미션 수주 가능",
+                "hero_title": "헬릭스<br><span style='color:var(--accent)'>개발자</span>",
+                "hero_desc": "시리어스 롤플레잉 서버를 위한 최적화된 시스템 전문 개발.",
+                "contact_title": "연락처",
+                "btn_explore": "전체 보기 ➔",
+                "showcase_title": "플러그인<br>쇼케이스",
+                "showcase_desc": "클릭하여 포트폴리오 확인",
+                "sub1_title": "UI 디자인",
+                "sub1_desc": "커스텀 Derma 스킨",
+                "sub2_title": "최적화",
+                "sub2_desc": "서버사이드 로직 설계",
+                "srv_plugin": "플러그인",
+                "srv_ui": "UI 제작",
+                "srv_full": "전체 개발",
+                "srv_consult": "상담문의",
+                "list_header": "최근 작업물",
+                "list_sub": "마우스를 올리면 재생, 클릭하면 확대됩니다.",
+                "btn_back": "홈으로 복귀",
+                "hint_expand": "클릭하여 확대 🔍",
+
+                "p1_title": "폴아웃 - 메인메뉴",
+                "p1_desc": "폴아웃 스타일의 메인메뉴 추가.",
+                "p2_title": "폴아웃 - 퀘스트 시스템",
+                "p2_desc": "유저들에게 폴아웃 스타일의 퀘스트 인터페이스 출력.",
+                "p3_title": "폴아웃 - 캐릭터 로드메뉴",
+                "p3_desc": "폴아웃 스타일의 캐릭터 로드UI 추가.",
+                "p4_title": "중세시대 - 요리 시스템",
+                "p4_desc": "시각적, 청각적 이펙트를 포함한 요리 시스템 추가.",
+                "p5_title": "중세시대 - 대장간 시스템",
+                "p5_desc": "시각적, 청각적 이펙트를 지닌 대장장이 시스템 추가.",
+                "p6_title": "하프라이프 - 콤바인 인터페이스",
+                "p6_desc": "퍼센테이지로 표시되는 사회안정도와 수치에 따른 효과와 마스크 부팅 UI 추가.",
+                "p7_title": "하프라이프 - 콤바인 PDA",
+                "p7_desc": "시민 보호 기동대와 같은 콤바인 팩션이 엑세스할 수 있는 PDA 시스템 추가. (분대 및 데이터베이스 시스템이 포함됨)",
+                "p8_title": "공장 시스템",
+                "p8_desc": "AFC, 열교환기, 증류탑 등등 정유공장에 주로 사용되는 장치 추가 및 중앙 관리 시스템 추가.",
+                "p9_title": "레트로 컴퓨터 스타일 메뉴 추가",
+                "p9_desc": "레트로 컴퓨터 스타일의 메인메뉴, 캐릭터 생성UI, 캐릭터 로드UI, 인벤토리UI 추가. (프리뷰에 나오는 모델 미포함)",
+                "p10_title": "Typewrite 효과 채팅",
+                "p10_desc": "Typewrite 효과로 출력되는 채팅 시스템."
+            },
+            "ja": {
+                "status": "● 依頼募集中",
+                "hero_title": "Helix<br><span style='color:var(--accent)'>開発者</span>",
+                "hero_desc": "シリアスRPサーバー向けのシステム開発専門。",
+                "contact_title": "連絡先",
+                "btn_explore": "すべて見る ➔",
+                "showcase_title": "プラグイン<br>ショーケース",
+                "showcase_desc": "クリックして作品を確認",
+                "sub1_title": "UI デザイン",
+                "sub1_desc": "カスタム Derma スキン",
+                "sub2_title": "最適化",
+                "sub2_desc": "サーバーサイドロジック",
+                "srv_plugin": "プラグイン",
+                "srv_ui": "UI 制作",
+                "srv_full": "フルセット",
+                "srv_consult": "要相談",
+                "list_header": "最近の作品",
+                "list_sub": "ホバーでプレビュー、クリックで拡大。",
+                "btn_back": "ホームへ戻る",
+                "hint_expand": "拡大する 🔍",
+
+                "p1_title": "Fallout - メインメニュー",
+                "p1_desc": "Fallout風のメインメニューを追加。",
+                "p2_title": "Fallout - クエストシステム",
+                "p2_desc": "ユーザーにFallout風のクエストUIを表示。",
+                "p3_title": "Fallout - キャラクターロードメニュー",
+                "p3_desc": "Fallout風のキャラクターロードUIを追加。",
+                "p4_title": "中世 - 料理システム",
+                "p4_desc": "視覚・音響エフェクト付きの料理システムを追加。",
+                "p5_title": "中世 - 鍛冶システム",
+                "p5_desc": "視覚・音響エフェクト付きの鍛冶システムを追加。",
+                "p6_title": "Half-Life - Combine インターフェース",
+                "p6_desc": "社会安定度(%)表示と数値による効果、マスクのブートUIを追加。",
+                "p7_title": "Half-Life - Combine PDA",
+                "p7_desc": "Combine勢力が利用できるPDAシステムを追加（分隊・データベース含む）。",
+                "p8_title": "工場システム",
+                "p8_desc": "AFC・熱交換器・蒸留塔など精製工場で使われる装置と中央管理システムを追加。",
+                "p9_title": "レトロPC風メニューパック",
+                "p9_desc": "レトロPC風のメインメニュー、キャラ作成UI、キャラロードUI、インベントリUIを追加。（プレビューのモデルは含まれません）",
+                "p10_title": "タイプライター風チャット",
+                "p10_desc": "タイプライター効果でメッセージが表示されるチャットシステム。"
+            },
+            "zh": {
+                "status": "● 接受委托中",
+                "hero_title": "Helix<br><span style='color:var(--accent)'>开发者</span>",
+                "hero_desc": "专注于硬核角色扮演服务器的系统开发。",
+                "contact_title": "联系方式",
+                "btn_explore": "查看全部 ➔",
+                "showcase_title": "插件<br>展示",
+                "showcase_desc": "点击查看作品集",
+                "sub1_title": "UI 设计",
+                "sub1_desc": "自定义 Derma 皮肤",
+                "sub2_title": "优化",
+                "sub2_desc": "服务器端逻辑设计",
+                "srv_plugin": "插件",
+                "srv_ui": "UI 制作",
+                "srv_full": "全套开发",
+                "srv_consult": "咨询",
+                "list_header": "最近的作品",
+                "list_sub": "悬停预览，点击放大。",
+                "btn_back": "返回主页",
+                "hint_expand": "点击放大 🔍",
+
+                "p1_title": "辐射 - 主菜单",
+                "p1_desc": "添加辐射风格的主菜单。",
+                "p2_title": "辐射 - 任务系统",
+                "p2_desc": "向玩家显示辐射风格的任务界面。",
+                "p3_title": "辐射 - 角色加载菜单",
+                "p3_desc": "添加辐射风格的角色加载 UI。",
+                "p4_title": "中世纪 - 烹饪系统",
+                "p4_desc": "添加包含视觉与音效的烹饪系统。",
+                "p5_title": "中世纪 - 铁匠系统",
+                "p5_desc": "添加包含视觉与音效的铁匠系统。",
+                "p6_title": "半条命 - Combine 界面",
+                "p6_desc": "添加社会稳定度百分比显示、数值对应效果，以及面罩开机 UI。",
+                "p7_title": "半条命 - Combine PDA",
+                "p7_desc": "添加 Combine 阵营可访问的 PDA 系统（包含小队与数据库系统）。",
+                "p8_title": "工厂系统",
+                "p8_desc": "添加炼油厂常用设备（如 AFC、换热器、蒸馏塔等）以及中央管理系统。",
+                "p9_title": "复古电脑风菜单套件",
+                "p9_desc": "添加复古电脑风主菜单、角色创建 UI、角色加载 UI、背包 UI。（预览模型不包含）",
+                "p10_title": "打字机效果聊天",
+                "p10_desc": "以打字机效果逐字输出的聊天系统。"
+            }
+        };
+
+        // =========================================
+        // LOGIC: 기능 구현
+        // =========================================
+
+        // 1. 언어 변경 로직
+        function setLanguage(lang, clickedEl) {
+            // 버튼 활성화 스타일 업데이트 (event 의존 제거)
+            document.querySelectorAll('.lang-option').forEach(btn => btn.classList.remove('active'));
+            if (clickedEl) clickedEl.classList.add('active');
+
+            // data-lang 속성을 가진 모든 요소 업데이트
+            const targets = document.querySelectorAll('[data-lang]');
+            targets.forEach(el => {
+                const key = el.getAttribute('data-lang');
+                if(translations[lang][key]) {
+                    el.innerHTML = translations[lang][key];
+                }
+            });
+            document.documentElement.lang = lang;
+        }
+
+        // 2. 화면 전환 로직 (홈 <-> 포트폴리오)
+        function switchView(viewName) {
+            const home = document.getElementById('home-view');
+            const portfolio = document.getElementById('portfolio-view');
+            const cards = document.querySelectorAll('.plugin-card');
+            
+            if (viewName === 'portfolio') {
+                // 홈 숨김 -> 포트폴리오 표시
+                home.classList.remove('view-active');
+                home.classList.add('view-hidden');
+                portfolio.classList.remove('view-hidden');
+                portfolio.classList.add('view-active');
+                
+                // 카드 순차적 등장 애니메이션 (Staggered Animation)
+                cards.forEach((card, index) => {
+                    card.style.animation = 'none';
+                    card.offsetHeight; // Trigger Reflow
+                    card.style.animation = `fadeInUp 0.6s ease forwards ${index * 0.1}s`;
+                });
+            } else {
+                // 포트폴리오 숨김 -> 홈 표시
+                portfolio.classList.remove('view-active');
+                portfolio.classList.add('view-hidden');
+                home.classList.remove('view-hidden');
+                home.classList.add('view-active');
+            }
+        }
+
+        // 3. 라이트박스 열기
+        function openLightbox(element) {
+            const sourceVideo = element.querySelector('video source').src;
+            const lightbox = document.getElementById('videoLightbox');
+            const lightboxVideo = document.getElementById('lightboxVideo');
+
+            if (!sourceVideo || sourceVideo.includes(window.location.href)) {
+                // 비디오 소스가 없을 경우 처리 (여기선 무시)
+                console.log("No video source connected.");
+            }
+            lightboxVideo.src = sourceVideo;
+            lightbox.classList.add('active');
+        }
+
+        // 4. 라이트박스 닫기
+        function closeLightbox() {
+            const lightbox = document.getElementById('videoLightbox');
+            const lightboxVideo = document.getElementById('lightboxVideo');
+            
+            lightbox.classList.remove('active');
+            // 애니메이션 후 소스 초기화 및 정지
+            setTimeout(() => {
+                lightboxVideo.pause();
+                lightboxVideo.src = "";
+            }, 300);
+        }
+
+        // 5. Discord ID 복사 + 토스트
+        let toastTimer = null;
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.innerHTML = message;
+            toast.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove('show'), 1600);
+        }
+
+        async function copyDiscordId() {
+            const contactCard = document.querySelector('.card.contact');
+            const id = contactCard?.getAttribute('data-discord-id') || contactCard?.querySelector('.contact-id')?.textContent?.trim();
+            if (!id) return showToast("복사할 ID가 없습니다.");
+
+            try {
+                await navigator.clipboard.writeText(id);
+                showToast(`Discord ID 복사됨: <strong>${id}</strong>`);
+            } catch (err) {
+                // Fallback for older / restricted environments
+                const temp = document.createElement('textarea');
+                temp.value = id;
+                temp.setAttribute('readonly', '');
+                temp.style.position = 'fixed';
+                temp.style.top = '-9999px';
+                document.body.appendChild(temp);
+                temp.select();
+                const ok = document.execCommand('copy');
+                document.body.removeChild(temp);
+                showToast(ok ? `Discord ID 복사됨: <strong>${id}</strong>` : "복사에 실패했습니다. 수동으로 복사해주세요.");
+            }
+        }
+
+        // 첫 로드 기본 언어: English (플러그인 목록 포함 전체 텍스트 초기화)
+        document.addEventListener('DOMContentLoaded', () => {
+            const defaultBtn = document.querySelector('.lang-option[data-lang-code="en"]');
+            setLanguage('en', defaultBtn);
+        });
+    </script>
+</body>
+</html>
